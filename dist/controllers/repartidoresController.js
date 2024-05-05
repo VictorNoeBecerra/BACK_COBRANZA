@@ -33,6 +33,7 @@ class RepartidoresController {
     }
     listAviables(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
+            var { day } = req.query;
             return database_1.default.getConnection(function (err, connection) {
                 if (err)
                     throw err; // not connected!
@@ -45,7 +46,7 @@ class RepartidoresController {
                 FROM operaciones o
                 JOIN repartidores re ON o.repartidor = re.ruta
                 JOIN rutas ru ON re.ruta = ru.no_ruta
-                WHERE o.date > '${(0, moment_1.default)().format('YYYY-MM-DD')}'
+                WHERE o.date > '${day}'
                 GROUP BY re.id
             );`;
                 connection.query(query, function (error, results, fields) {

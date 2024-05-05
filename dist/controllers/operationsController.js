@@ -1,7 +1,4 @@
 "use strict";
-
-const moment = require("moment");
-
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -84,7 +81,7 @@ class OperationsController {
             database_1.default.getConnection(function (err, connection) {
                 if (err)
                     throw err; // not connected! 
-                const query = `SELECT SUM(o.cobro) as cobros, SUM(o.utilidad) as utilidad, SUM(o.comision) as comision, ((p.content * fc.cantidad) * i.ventaPz)/1000 AS klts
+                const query = `SELECT SUM(o.cobro) as cobros, SUM(o.utilidad) as utilidad, SUM(o.comision) as comision, ((p.content * fc.cantidad) * SUM(i.ventaPz))/1000 AS klts
 FROM
     repartidores re
         JOIN
@@ -98,7 +95,8 @@ FROM
         JOIN
     unidades_medida um ON p.um = um.id
         LEFT JOIN
-    factores_conversion fc ON um.id = fc.um WHERE DATE(${moment().subtract(6, 'h')}) = CURRENT_DATE()`;
+    factores_conversion fc ON um.id = fc.um WHERE DATE(o.date) = '${req.query.day}'  GROUP BY o.date`;
+                // console.log(query);
                 connection.query(query, function (error, results, fields) {
                     var resR = results;
                     res.json(results);
@@ -107,12 +105,17 @@ FROM
                         throw error;
                 });
             });
+            // console.log("🚀 ~ OperationsController ~ query:", query)
         });
     }
     getResumeVentas(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { weekDesfase } = req.query;
-            const baseDate = (0, moment_1.default)().subtract((Number(weekDesfase) || 0), 'weeks');
+            const { day, weekDesfase } = req.query;
+            // console.log(day);
+            // console.log( moment(day?.toString()));
+            // console.log( moment());
+            // console.log( moment().subtract(6,'h'));
+            const baseDate = (0, moment_1.default)(day === null || day === void 0 ? void 0 : day.toString()).subtract((Number(weekDesfase) || 0), 'weeks');
             const start = baseDate.startOf('week').format(_f), end = baseDate.endOf('week').format(_f);
             // console.log(start, end)
             database_1.default.getConnection(function (err, connection) {
@@ -121,7 +124,7 @@ FROM
                 const query = `SELECT
       no_ruta,
       dte,
-      cobro,
+      SUM(cobro) as cobro,
       SUM(klt) AS total_klt
   FROM (
       SELECT
@@ -160,6 +163,7 @@ FROM
     getResumeCobros(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             database_1.default.getConnection(function (err, connection) {
+                var { day } = req.query;
                 if (err)
                     throw err; // not connected!
                 const query2 = `SELECT o.repartidor,
@@ -169,7 +173,7 @@ FROM
     SUM(o.comision) AS comisiones,
     SUM(o.costos) AS costos
         FROM
-        operaciones o WHERE DATE(o.date) BETWEEN '${(0, moment_1.default)().startOf('week').format('YYYY-MM-DD')}' AND '${(0, moment_1.default)().add(1, 'days').format('YYYY-MM-DD')}' GROUP BY o.date, o.repartidor;`;
+        operaciones o WHERE DATE(o.date) BETWEEN '${(0, moment_1.default)(day === null || day === void 0 ? void 0 : day.toString()).startOf('week').format('YYYY-MM-DD')}' AND '${(0, moment_1.default)(day === null || day === void 0 ? void 0 : day.toString()).add(1, 'days').format('YYYY-MM-DD')}' GROUP BY o.date, o.repartidor;`;
                 // console.log('Query cobros: ', query2);
                 connection.query(query2, function (error, results, fields) {
                     var resR = results;
@@ -212,7 +216,9 @@ FROM
                             throw err;
                         }
                         const { repartidor, cobro, utilidad, comision, costos, date, items } = obj;
-                        connection.query(`INSERT INTO  \`operaciones\` ( \`repartidor\`, \`cobro\`, \`utilidad\`, \`comision\`, \`costos\`, \`date\`) VALUES (${repartidor}, ${cobro}, ${utilidad}, ${comision}, ${costos}, "${date}" );`, function (error, results, fields) {
+                        const quer = `INSERT INTO  \`operaciones\` ( \`repartidor\`, \`cobro\`, \`utilidad\`, \`comision\`, \`costos\`, \`date\`) VALUES (${repartidor}, ${cobro}, ${utilidad}, ${comision}, ${costos}, "${date}" );`;
+                        // console.log('CREATE-', quer);
+                        connection.query(quer, function (error, results, fields) {
                             if (error)
                                 return connection.rollback(function () { throw error; });
                             const { insertId } = results; // Obtener el ID de la operación insertada
@@ -386,7 +392,7 @@ FROM
         WHERE  o.date BETWEEN '${start}' AND '${end}' ${idRuta ? ' AND o.repartidor = ' + idRuta : ''}
         GROUP BY i.code  
         ORDER BY p.grupo ASC;`;
-                    console.log(start, end, query);
+                    // console.log(start, end, query);
                     connection.query(query, function (error, results, fields) {
                         if (error)
                             return connection.rollback(function () {
@@ -596,7 +602,9 @@ FROM
                 ventaPz = ${i.ventaPz} 
               WHERE id = ${i.id};`);
                             // console.log('   foreacb')
+                            // console.log('\t', q1);
                             q1.forEach((query) => __awaiter(this, void 0, void 0, function* () {
+                                // console.log('\t', query);
                                 yield connection.query(query, function (error2, results2, fields) {
                                     if (error2) {
                                         return connection.rollback(function () { throw error2; });
@@ -657,7 +665,9 @@ FROM
                                     });
                                 });
                             }
+                            // console.log("🚀 ~ q1:", q1)
                         });
+                        // console.log("🚀 ~ q1:", q1)
                     });
                 });
             }

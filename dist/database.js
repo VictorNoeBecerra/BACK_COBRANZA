@@ -18,6 +18,7 @@ pool.getConnection(function (err, connection) {
         throw err; // not connected!
     // Use the connection
     connection.query('SELECT NOW();', function (error, results, fields) {
+        // console.log(`Hola`, moment().format('l'));
         console.log(`Base De datos Conectada: `, results[0]['NOW()']);
         if (error)
             throw error;
