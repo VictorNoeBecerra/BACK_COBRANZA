@@ -1,6 +1,16 @@
 import { Request, Response } from 'express';
 import pool from '../database';
 
+
+import moment from 'moment';
+moment.updateLocale("es-mx", {
+  week: {
+    dow: 6, // First day of week is Saturday
+    doy: 8 // First week of year must contain 1 January (7 + 6 - 1)
+  }
+});
+const _f = 'YYYY-MM-DD'
+
 class ProductsProduct {
     public async list(req: Request, res: Response): Promise<void> {
         pool.getConnection(function (err, connection) {
@@ -17,9 +27,36 @@ class ProductsProduct {
     }
 
     public async getTopProducts(req: Request, res: Response): Promise<void> {
+
+        const {day, weekDesfase } = req.query
+        // console.log(day);
+        // console.log( moment(day?.toString()));
+        // console.log( moment());
+        // console.log( moment().subtract(6,'h'));
+        
+        
+            const baseDate = moment(day?.toString()).subtract((Number(weekDesfase) || 0), 'weeks')
+            const start = baseDate.startOf('week').format(_f), end = baseDate.endOf('week').format(_f);
+
         pool.getConnection(function (err, connection) {
             if (err) throw err; // not connected!
-            const query = `SELECT  p.*,  sum(itm.ventaPz) AS vendido   FROM products p JOIN item_operacion itm ON p.code = itm.code group by p.code ORDER BY vendido DESC LIMIT 10;`
+            const query = `SELECT
+            p.*,
+            SUM(itm.ventaPz) AS vendido
+        FROM
+            products p
+        JOIN item_operacion itm ON
+            p.code = itm.code
+        JOIN operaciones ops ON
+            ops.id = itm.operacion
+        WHERE
+            DATE(ops.date) BETWEEN '${start}' AND '${end}'
+        GROUP BY
+            p.code
+        ORDER BY
+            vendido
+        DESC
+        LIMIT 10;`
             connection.query(query, function (error, results, fields) {
                 var resR: JSON = results;
                 res.json(resR);
