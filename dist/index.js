@@ -48,7 +48,7 @@ class Server {
         console.log('Starting');
         try {
             this.app.listen(this.app.get('port'), () => {
-                console.log(`Listening on puerto marrano: `, this.app.get('port'));
+                console.log(`API REST :: SELLO ROJO LA PIEDAD :: Listening on port: `, this.app.get('port'));
             });
         }
         catch (error) {
