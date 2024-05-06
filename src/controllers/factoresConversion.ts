@@ -3,11 +3,21 @@ import pool from '../database';
 
 class FactoresConversionController {
     public async list(req: Request, res: Response): Promise<void> {
-        pool.getConnection(function (err, connection) {            
+        pool.getConnection(function (err, connection) {
             if (err) throw err; // not connected!
-            connection.query('SELECT * FROM `factores_conversion`', function (error, results, fields) {
-                var resR:JSON = results;         
-                   
+            connection.query(`SELECT 
+            fac.*,
+            um1.codigo AS um_codigo,
+            fac.cantidad AS cantidad,
+            um2.codigo AS um_eq_codigo
+        FROM 
+            factores_conversion AS fac
+        JOIN 
+            unidades_medida AS um1 ON fac.um = um1.id
+        JOIN 
+            unidades_medida AS um2 ON fac.um_eq = um2.id;`, function (error, results, fields) {
+                var resR: JSON = results;
+
                 res.json(resR);
                 connection.release();
                 if (error) throw error;
@@ -16,11 +26,11 @@ class FactoresConversionController {
 
     }
     public async create(req: Request, res: Response): Promise<void> {
-        var obj = req.body; 
-        console.log('Objeto que viene del body: '+obj); 
-        pool.getConnection(function (err, connection) {            
+        var obj = req.body;
+        console.log('Objeto que viene del body: ' + obj);
+        pool.getConnection(function (err, connection) {
             if (err) throw err; // not connected!
-            connection.query('INSERT INTO `factores_conversion` set ?',[obj], function (error, results, fields) {
+            connection.query('INSERT INTO `factores_conversion` set ?', [obj], function (error, results, fields) {
                 console.log('Consulta');
                 res.json(results);
                 connection.release();
@@ -31,10 +41,10 @@ class FactoresConversionController {
     }
     public delete(req: Request, res: Response) {
         var id = req.params.id;
-        console.log('Id del factores_conversion a elliminar: '+id); 
-        pool.getConnection(function (err, connection) {            
+        console.log('Id del factores_conversion a elliminar: ' + id);
+        pool.getConnection(function (err, connection) {
             if (err) throw err; // not connected!
-            connection.query('DELETE FROM `factores_conversion` WHERE `id` = ?',id, function (error, results, fields)  {
+            connection.query('DELETE FROM `factores_conversion` WHERE `id` = ?', id, function (error, results, fields) {
                 console.log('Borra');
                 res.json(results);
                 connection.release();
@@ -43,13 +53,13 @@ class FactoresConversionController {
         });
 
     }
-   
+
     public search(req: Request, res: Response) {
         var id = req.params.id;
-        pool.getConnection(function (err, connection) {            
+        pool.getConnection(function (err, connection) {
             if (err) throw err; // not connected!
-            connection.query('SELECT * FROM `factores_conversion` where `id` = ?',id, function (error, results, fields) {
-                var resR = results;         
+            connection.query('SELECT * FROM `factores_conversion` where `id` = ?', id, function (error, results, fields) {
+                var resR = results;
                 console.log('busca');
                 res.json(resR);
                 connection.release();
@@ -59,12 +69,12 @@ class FactoresConversionController {
     }
     public update(req: Request, res: Response) {
         var id = req.params.id;
-        pool.getConnection(function (err, connection) {            
+        pool.getConnection(function (err, connection) {
             if (err) throw err; // not connected!
-            connection.query('UPDATE `factores_conversion` SET ? WHERE `id` = ?',[req.body,req.params.id], function (error, results, fields) {
+            connection.query('UPDATE `factores_conversion` SET ? WHERE `id` = ?', [req.body, req.params.id], function (error, results, fields) {
                 if (error) throw error;
-                connection.query('SELECT * FROM `familias` where `id` = ?',id, function (error2, results2, fields2){
-                    var resR = results2;         
+                connection.query('SELECT * FROM `familias` where `id` = ?', id, function (error2, results2, fields2) {
+                    var resR = results2;
                     console.log('editado:');
                     res.json(resR);
                     connection.release();
