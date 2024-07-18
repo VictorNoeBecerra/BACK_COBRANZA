@@ -19,7 +19,17 @@ class FactoresConversionController {
             database_1.default.getConnection(function (err, connection) {
                 if (err)
                     throw err; // not connected!
-                connection.query('SELECT * FROM `factores_conversion`', function (error, results, fields) {
+                connection.query(`SELECT 
+            fac.*,
+            um1.codigo AS um_codigo,
+            fac.cantidad AS cantidad,
+            um2.codigo AS um_eq_codigo
+        FROM 
+            factores_conversion AS fac
+        JOIN 
+            unidades_medida AS um1 ON fac.um = um1.id
+        JOIN 
+            unidades_medida AS um2 ON fac.um_eq = um2.id;`, function (error, results, fields) {
                     var resR = results;
                     res.json(resR);
                     connection.release();

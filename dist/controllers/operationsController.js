@@ -16,7 +16,7 @@ const database_1 = __importDefault(require("../database"));
 const moment_1 = __importDefault(require("moment"));
 moment_1.default.updateLocale("es-mx", {
     week: {
-        dow: 6,
+        dow: 6, // First day of week is Saturday
         doy: 8 // First week of year must contain 1 January (7 + 6 - 1)
     }
 });

@@ -1,12 +1,14 @@
 "use strict";
-// api buena
 Object.defineProperty(exports, "__esModule", { value: true });
+// api buena
 exports.default = {
     database: {
-        host: 'vnbhdevelop.xyz',
-        user: 'u990341293_admin',
-        password: ']13!zvHHc/9',
-        database: 'u990341293_db_lacteos'
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT || '3306', 10),
+        ssl: process.env.DB_SSL === 'true'
     }
 };
 // "use strict";
