@@ -1,34 +1,22 @@
 import mysql from 'mysql';
 import keys from './keys';
-import moment from 'moment';
-// import { prependOnceListener } from 'cluster';
-// import { json } from 'body-parser';
-var pool  = mysql.createPool(keys.database);
-// var game1 = {
-//   'title':'Underground2',
-//   'descripcion':'carreras',
-//   'image':'Porno.img'
-// }
 
-pool.getConnection(function(err, connection) {
-  if (err) throw err; // not connected!
-
-  // Use the connection
-  connection.query('SELECT NOW();', function (error, results, fields) {       
-    // console.log(`Hola`, moment().format('l'));
-    console.log(`Base De datos Conectada: `, results[0]['NOW()']);
-    if (error) throw error; 
-  });
-
+const pool = mysql.createPool({
+    host: keys.database.host,
+    user: keys.database.user,
+    password: keys.database.password,
+    database: keys.database.database,
+    port: keys.database.port,
+    ssl: keys.database.ssl ? { rejectUnauthorized: true } : undefined
 });
-export default pool ;
-    
 
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('Error connecting to MySQL:', err);
+        return;
+    }
+    if (connection) connection.release();
+    console.log('DB Connected!');
+});
 
-
-/*
-connection.query('SELECT 1 + 1 AS solution', function (error, results, fields) {
-        if (error) throw error;
-        console.log('The solution is: ', results[0].solution);
-      });  
-      */
+export default pool;
