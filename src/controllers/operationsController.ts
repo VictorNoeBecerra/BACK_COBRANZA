@@ -87,28 +87,21 @@ class OperationsController {
       //     unidades_medida um ON p.um = um.id
       //         LEFT JOIN
       //     factores_conversion fc ON um.id = fc.um WHERE DATE(o.date) = '${req.query.day}'  GROUP BY o.date`
-      const query = `SELECT 
-    SUM(o.cobro) as cobros, 
-    SUM(o.utilidad) as utilidad, 
-    SUM(o.comision) as comision, 
-    (SUM(p.content * fc.cantidad * i.ventaPz) / 1000) AS klts
-FROM
-    repartidores re
-        JOIN
-    rutas ru ON re.ruta = ru.no_ruta
-        JOIN
-    operaciones o ON o.repartidor = re.ruta
-        JOIN
-    item_operacion i ON i.operacion = o.id
-        INNER JOIN
-    products p ON i.code = p.code
-        JOIN
-    unidades_medida um ON p.um = um.id
-        LEFT JOIN
-    factores_conversion fc ON um.id = fc.um 
-WHERE DATE(o.date) = '${req.query.day}' 
-GROUP BY o.date;`
-      // console.log(query);
+      const query = `SELECT SUM(o.cobro) as cobros, SUM(o.utilidad) as utilidad, SUM(o.comision) as comision, ((SUM(p.content * fc.cantidad) * SUM(i.ventaPz))/1000) AS klts
+      FROM
+          repartidores re
+              JOIN
+          rutas ru ON re.ruta = ru.no_ruta
+              JOIN
+          operaciones o ON o.repartidor = re.ruta
+              JOIN
+          item_operacion i ON i.operacion = o.id
+              INNER JOIN
+          products p ON i.code = p.code
+              JOIN
+          unidades_medida um ON p.um = um.id
+              LEFT JOIN
+          factores_conversion fc ON um.id = fc.um WHERE DATE(o.date) = '${req.query.day}'  GROUP BY o.date`
 
       console.log('query:', query)
       connection.query(query, function (error, results, fields) {
@@ -229,7 +222,7 @@ GROUP BY o.date;`
 
           const quer = 'INSERT INTO `operaciones` (`repartidor`, `cobro`, `utilidad`, `comision`, `costos`, `date`) VALUES (?, ?, ?, ?, ?, ?)';
           const values = [repartidor, cobro, utilidad, comision, costos, date];
-          
+
           console.log('quer:', quer)
           console.log(values)
           connection.query(quer, values, function (error, results, fields) {
