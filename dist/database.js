@@ -11,7 +11,7 @@ const pool = mysql_1.default.createPool({
     password: keys_1.default.database.password,
     database: keys_1.default.database.database,
     port: keys_1.default.database.port,
-    ssl: keys_1.default.database.ssl ? { rejectUnauthorized: true } : undefined
+    ssl: { rejectUnauthorized: false }
 });
 pool.getConnection((err, connection) => {
     if (err) {

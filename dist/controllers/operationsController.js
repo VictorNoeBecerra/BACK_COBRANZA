@@ -81,22 +81,38 @@ class OperationsController {
             database_1.default.getConnection(function (err, connection) {
                 if (err)
                     throw err; // not connected! 
-                const query = `SELECT SUM(o.cobro) as cobros, SUM(o.utilidad) as utilidad, SUM(o.comision) as comision, ((p.content * fc.cantidad) * SUM(i.ventaPz))/1000 AS klts
-FROM
-    repartidores re
-        JOIN
-    rutas ru ON re.ruta = ru.no_ruta
-        JOIN
-    operaciones o ON o.repartidor = re.ruta
-        JOIN
-    item_operacion i ON i.operacion = o.id
-        INNER JOIN
-    products p ON i.code = p.code
-        JOIN
-    unidades_medida um ON p.um = um.id
-        LEFT JOIN
-    factores_conversion fc ON um.id = fc.um WHERE DATE(o.date) = '${req.query.day}'  GROUP BY o.date`;
-                // console.log(query);
+                //       const query = `SELECT SUM(o.cobro) as cobros, SUM(o.utilidad) as utilidad, SUM(o.comision) as comision, ((p.content * fc.cantidad) * SUM(i.ventaPz))/1000 AS klts
+                // FROM
+                //     repartidores re
+                //         JOIN
+                //     rutas ru ON re.ruta = ru.no_ruta
+                //         JOIN
+                //     operaciones o ON o.repartidor = re.ruta
+                //         JOIN
+                //     item_operacion i ON i.operacion = o.id
+                //         INNER JOIN
+                //     products p ON i.code = p.code
+                //         JOIN
+                //     unidades_medida um ON p.um = um.id
+                //         LEFT JOIN
+                //     factores_conversion fc ON um.id = fc.um WHERE DATE(o.date) = '${req.query.day}'  GROUP BY o.date`
+                const query = `
+  SELECT 
+    SUM(o.cobro) AS cobros, 
+    SUM(o.utilidad) AS utilidad, 
+    SUM(o.comision) AS comision, 
+    SUM((p.content * fc.cantidad) * i.ventaPz) / 1000 AS klts
+  FROM repartidores re
+  JOIN rutas ru ON re.ruta = ru.no_ruta
+  JOIN operaciones o ON o.repartidor = re.ruta
+  JOIN item_operacion i ON i.operacion = o.id
+  INNER JOIN products p ON i.code = p.code
+  JOIN unidades_medida um ON p.um = um.id
+  LEFT JOIN factores_conversion fc ON um.id = fc.um
+  WHERE DATE(o.date) = '${req.query.day}'
+  GROUP BY o.date, p.content, fc.cantidad;
+`;
+                console.log('query:', query);
                 connection.query(query, function (error, results, fields) {
                     var resR = results;
                     res.json(results);
@@ -215,10 +231,14 @@ FROM
                         if (err) {
                             throw err;
                         }
-                        const { repartidor, cobro, utilidad, comision, costos, date, items } = obj;
-                        const quer = `INSERT INTO  \`operaciones\` ( \`repartidor\`, \`cobro\`, \`utilidad\`, \`comision\`, \`costos\`, \`date\`) VALUES (${repartidor}, ${cobro}, ${utilidad}, ${comision}, ${costos}, "${date}" );`;
-                        // console.log('CREATE-', quer);
-                        connection.query(quer, function (error, results, fields) {
+                        const { repartidor, cobro, utilidad, comision, costos, date: dateOld, items } = obj;
+                        const date = (0, moment_1.default)(dateOld).format('YYYY-MM-DD HH:mm:ss');
+                        console.log('date formatted whith ...).format(`YYYY-MM-DD HH:mm:ss`); :', date, ', dateOld:', dateOld);
+                        const quer = 'INSERT INTO `operaciones` (`repartidor`, `cobro`, `utilidad`, `comision`, `costos`, `date`) VALUES (?, ?, ?, ?, ?, ?)';
+                        const values = [repartidor, cobro, utilidad, comision, costos, date];
+                        console.log('quer:', quer);
+                        console.log(values);
+                        connection.query(quer, values, function (error, results, fields) {
                             if (error)
                                 return connection.rollback(function () { throw error; });
                             const { insertId } = results; // Obtener el ID de la operación insertada
