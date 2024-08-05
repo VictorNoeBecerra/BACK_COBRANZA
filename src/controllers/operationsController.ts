@@ -87,7 +87,11 @@ class OperationsController {
       //     unidades_medida um ON p.um = um.id
       //         LEFT JOIN
       //     factores_conversion fc ON um.id = fc.um WHERE DATE(o.date) = '${req.query.day}'  GROUP BY o.date`
-      const query = `SELECT SUM(o.cobro) as cobros, SUM(o.utilidad) as utilidad, SUM(o.comision) as comision, ((p.content * fc.cantidad) * SUM(i.ventaPz))/1000 AS klts
+      const query = `SELECT 
+    SUM(o.cobro) as cobros, 
+    SUM(o.utilidad) as utilidad, 
+    SUM(o.comision) as comision, 
+    (SUM(p.content * fc.cantidad * i.ventaPz) / 1000) AS klts
 FROM
     repartidores re
         JOIN
@@ -101,9 +105,9 @@ FROM
         JOIN
     unidades_medida um ON p.um = um.id
         LEFT JOIN
-    factores_conversion fc ON um.id = fc.um
-WHERE DATE(o.date) = '${req.query.day}'
-GROUP BY o.date, p.content, fc.cantidad`
+    factores_conversion fc ON um.id = fc.um 
+WHERE DATE(o.date) = '${req.query.day}' 
+GROUP BY o.date;`
       // console.log(query);
 
       console.log('query:', query)
@@ -219,10 +223,17 @@ GROUP BY o.date, p.content, fc.cantidad`
         if (err) { throw err }
         connection.beginTransaction(function (err) {
           if (err) { throw err }
-          const { repartidor, cobro, utilidad, comision, costos, date, items } = obj;
-          const quer = `INSERT INTO \`operaciones\` (\`repartidor\`, \`cobro\`, \`utilidad\`, \`comision\`, \`costos\`, \`date\`) VALUES (?, ?, ?, ?, ?, ?);`;
+          const { repartidor, cobro, utilidad, comision, costos, date: dateOld, items } = obj;
+          const date = moment(dateOld).format('YYYY-MM-DD HH:mm:ss');
+          console.log('date formatted whith ...).format(`YYYY-MM-DD HH:mm:ss`); :', date, ', dateOld:', dateOld);
 
-          connection.query(quer, [repartidor, cobro, utilidad, comision, costos, date], function (error, results, fields) {
+          const quer = 'INSERT INTO `operaciones` (`repartidor`, `cobro`, `utilidad`, `comision`, `costos`, `date`) VALUES (?, ?, ?, ?, ?, ?)';
+          const values = [repartidor, cobro, utilidad, comision, costos, date];
+          
+          console.log('quer:', quer)
+          console.log(values)
+          connection.query(quer, values, function (error, results, fields) {
+
             if (error)
               return connection.rollback(function () { throw error });
             const { insertId } = results; // Obtener el ID de la operación insertada
