@@ -372,36 +372,98 @@ class OperationsController {
     });
   }
 
+  // public async dataReportRuta(req: Request, res: Response): Promise<void> {
+  //   var { start, end, idRuta } = req.query;
+  //   pool.getConnection(function (err, connection) {
+  //     if (err) {
+  //       res.status(500).json({ message: 'Error al crear la operación' });
+  //     }; // not connected!
+  //     connection.beginTransaction(function (err) {
+  //       if (err) {
+  //         // throw err; // No se pudo iniciar la transacción
+  //         res.status(500).json({ message: 'No se pudo iniciar la transacción de generar el reporte' });
+  //       }
+  //       let query = `SELECT 
+  //       p.description,
+  //       re.nombres,
+  //       re.ruta,
+  //       ru.descripcion as zona,
+  //       o.date,
+  //       SUM(i.sTotalPz) AS sTotalPz,
+  //       SUM(i.rTotalPz) AS rTotalPz,
+  //       SUM(i.ventaPz) AS ventaPz,
+  //       SUM(i.saldo) AS saldo,
+  //         ((p.content * fc.cantidad) * SUM(i.ventaPz)) / 1000 AS klts,
+  //         ((p.precio_lista - (p.precio_compra + p.comision )) * SUM(i.ventaPz )) as utilidad,
+  //         (p.precio_lista - p.precio_compra) as margen,
+  //         (p.precio_lista - p.precio_compra) * SUM( i.ventaPz ) as margenTotal,
+  //         (p.comision * SUM( i.ventaPz )) as comision
+  //       FROM 
+  //       repartidores re
+  //       JOIN rutas ru ON re.ruta = ru.no_ruta
+  //       JOIN operaciones o  ON o.repartidor = re.ruta
+  //       JOIN item_operacion i ON i.operacion = o.id
+  //       INNER JOIN products p ON i.code = p.code
+  //       JOIN unidades_medida um ON p.um = um.id
+  //       LEFT JOIN factores_conversion fc ON um.id = fc.um
+  //       WHERE  o.date BETWEEN '${start}' AND '${end}' ${idRuta ? ' AND o.repartidor = ' + idRuta : ''}
+  //       GROUP BY i.code  
+  //       ORDER BY p.grupo ASC;`
+
+
+  //       // console.log(start, end, query);
+  //       connection.query(query, function (error, results, fields) {
+  //         if (error) {
+  //           console.log('error1:', error)
+  //           return connection.rollback(function () {
+  //             res.status(500).json({ message: 'Error al terminar de generar el reporte en operaciones' })
+  //           }); // Ocurrió un error al ejecutar la consulta INSERT en la tabla 'operaciones'
+  //         }
+  //         connection.commit(function (err) {
+  //           if (err) {
+  //             return connection.rollback(function () {
+  //               res.status(500).json({ message: 'Error al terminar de generar el reporte' });
+  //             });
+  //           }
+  //           res.json(results);
+  //           connection.release(); // Liberar la conexión
+  //         });
+  //         // });
+  //       });
+  //     });
+  //   });
+  // }
+
   public async dataReportRuta(req: Request, res: Response): Promise<void> {
     var { start, end, idRuta } = req.query;
     pool.getConnection(function (err, connection) {
       if (err) {
         res.status(500).json({ message: 'Error al crear la operación' });
-      }; // not connected!
+      } // not connected!
       connection.beginTransaction(function (err) {
         if (err) {
-          // throw err; // No se pudo iniciar la transacción
           res.status(500).json({ message: 'No se pudo iniciar la transacción de generar el reporte' });
         }
+        
         let query = `SELECT 
-        p.description,
-        re.nombres,
-        re.ruta,
-        ru.descripcion as zona,
-        o.date,
-        SUM(i.sTotalPz) AS sTotalPz,
-        SUM(i.rTotalPz) AS rTotalPz,
-        SUM(i.ventaPz) AS ventaPz,
-        SUM(i.saldo) AS saldo,
-          ((p.content * fc.cantidad) * SUM(i.ventaPz)) / 1000 AS klts,
+          p.description,
+          ANY_VALUE(re.nombres) AS nombres,
+          ANY_VALUE(re.ruta) AS ruta,
+          ANY_VALUE(ru.descripcion) as zona,
+          ANY_VALUE(o.date) as date,
+          SUM(i.sTotalPz) AS sTotalPz,
+          SUM(i.rTotalPz) AS rTotalPz,
+          SUM(i.ventaPz) AS ventaPz,
+          SUM(i.saldo) AS saldo,
+          ((p.content * ANY_VALUE(fc.cantidad)) * SUM(i.ventaPz)) / 1000 AS klts,
           ((p.precio_lista - (p.precio_compra + p.comision )) * SUM(i.ventaPz )) as utilidad,
           (p.precio_lista - p.precio_compra) as margen,
-          (p.precio_lista - p.precio_compra) * SUM( i.ventaPz ) as margenTotal,
-          (p.comision * SUM( i.ventaPz )) as comision
+          (p.precio_lista - p.precio_compra) * SUM(i.ventaPz) as margenTotal,
+          (p.comision * SUM(i.ventaPz)) as comision
         FROM 
-        repartidores re
+          repartidores re
         JOIN rutas ru ON re.ruta = ru.no_ruta
-        JOIN operaciones o  ON o.repartidor = re.ruta
+        JOIN operaciones o ON o.repartidor = re.ruta
         JOIN item_operacion i ON i.operacion = o.id
         INNER JOIN products p ON i.code = p.code
         JOIN unidades_medida um ON p.um = um.id
@@ -409,15 +471,14 @@ class OperationsController {
         WHERE  o.date BETWEEN '${start}' AND '${end}' ${idRuta ? ' AND o.repartidor = ' + idRuta : ''}
         GROUP BY i.code  
         ORDER BY p.grupo ASC;`
-
-
-        // console.log(start, end, query);
+  
         connection.query(query, function (error, results, fields) {
-          if (error)
+          if (error) {
+            console.log('error 1:', error)
             return connection.rollback(function () {
-              res.status(500).json({ message: 'Error al terminar de generar el reporte en operaciones' })
-            }); // Ocurrió un error al ejecutar la consulta INSERT en la tabla 'operaciones'
-
+              res.status(500).json({ message: 'Error al terminar de generar el reporte en operaciones' });
+            });
+          }
           connection.commit(function (err) {
             if (err) {
               return connection.rollback(function () {
@@ -427,11 +488,11 @@ class OperationsController {
             res.json(results);
             connection.release(); // Liberar la conexión
           });
-          // });
         });
       });
     });
   }
+  
 
   public async searchByRutaRange(req: Request, res: Response): Promise<void> {
     var { start, end, idRuta } = req.query;
@@ -478,11 +539,13 @@ class OperationsController {
         //         o.date BETWEEN '${start} 'AND '${end}'
         // o.date BETWEEN '${start}' AND '${end}'
         connection.query(query, function (error, results, fields) {
-          if (error)
+          if (error){
+            console.log('error 2: ', error);
+            
             return connection.rollback(function () {
               res.status(500).json({ message: 'Error al terminar de generar el reporte en operaciones' })
             }); // Ocurrió un error al ejecutar la consulta INSERT en la tabla 'operaciones'
-
+}
           let query2 = `SELECT 
           i.*,
           p.*,
@@ -583,11 +646,13 @@ class OperationsController {
 
       //  console.log(start, end, query);
       connection.query(query, function (error, results, fields) {
-        if (error)
+        if (error){
+          console.log('error 3: ', error);
+
           return connection.rollback(function () {
             res.status(500).json({ message: 'Error al terminar de generar el reporte en operaciones' })
           }); // Ocurrió un error al ejecutar la consulta INSERT en la tabla 'operaciones'
-
+}
         res.json(results);
         connection.release();
 
